@@ -1,0 +1,52 @@
+--- linenoise.c	2024-04-07 20:17:21.846846945 +0200
++++ linenoise-with-word-navigation.c	2024-04-07 20:16:21.498935680 +0200
+@@ -780,6 +780,18 @@
+     }
+ }
+ 
++void linenoiseEditMovePrevWord(struct linenoiseState *l) {
++  while (l->pos > 0 && l->buf[l->pos-1] == ' ') l->pos--;
++  while (l->pos > 0 && l->buf[l->pos-1] != ' ') l->pos--;
++  refreshLine(l);
++}
++
++void linenoiseEditMoveNextWord(struct linenoiseState *l) {
++  while (l->pos < l->len && l->buf[l->pos-1] == ' ') l->pos++;
++  while (l->pos < l->len && l->buf[l->pos-1] != ' ') l->pos++;
++  refreshLine(l);
++}
++
+ /* Substitute the currently edited line with the next or previous history
+  * entry as specified by 'dir'. */
+ #define LINENOISE_HISTORY_NEXT 0
+@@ -932,7 +944,7 @@
+ 
+     char c;
+     int nread;
+-    char seq[3];
++    char seq[5];
+ 
+     nread = read(l->ifd,&c,1);
+     if (nread <= 0) return NULL;
+@@ -1020,6 +1032,21 @@
+                         break;
+                     }
+                 }
++                else if (seq[2] == ';') {
++                    // read additional 2 bytes
++                    if (read(l->ifd, seq + 3, 1) == -1) break;
++                    if (read(l->ifd, seq + 4, 1) == -1) break;
++                    if (seq[3] == '5') {
++                        switch (seq[4]) {
++                        case 'D': // ctrl-left
++                            linenoiseEditMovePrevWord(l);
++                            break;
++                        case 'C': // ctrl-right
++                            linenoiseEditMoveNextWord(l);
++                            break;
++                        }
++                    }
++                }
+             } else {
+                 switch(seq[1]) {
+                 case 'A': /* Up */
