@@ -1,5 +1,5 @@
---- linenoise.c	2024-04-13 00:15:59.012706916 +0200
-+++ linenoise-extended.c	2024-04-12 23:43:58.916819157 +0200
+--- other/linenoise.c	2024-04-13 19:00:48.204849993 +0200
++++ src/foreign/linenoise-extended.c	2024-04-13 18:59:31.296763964 +0200
 @@ -1,3 +1,8 @@
 +// linenoise.c with the following extensions:
 +// * word-navigation with ctrl+left and ctrl+right
@@ -381,7 +381,26 @@
          refreshLine(l);
      }
  }
-@@ -810,8 +945,9 @@
+@@ -780,6 +915,18 @@
+     }
+ }
+ 
++void linenoiseEditMovePrevWord(struct linenoiseState *l) {
++  while (l->pos > 0 && l->buf[l->pos-1] == ' ') l->pos--;
++  while (l->pos > 0 && l->buf[l->pos-1] != ' ') l->pos--;
++  refreshLine(l);
++}
++
++void linenoiseEditMoveNextWord(struct linenoiseState *l) {
++  while (l->pos < l->len && l->buf[l->pos-1] == ' ') l->pos++;
++  while (l->pos < l->len && l->buf[l->pos-1] != ' ') l->pos++;
++  refreshLine(l);
++}
++
+ /* Substitute the currently edited line with the next or previous history
+  * entry as specified by 'dir'. */
+ #define LINENOISE_HISTORY_NEXT 0
+@@ -810,8 +957,9 @@
   * position. Basically this is what happens with the "Delete" keyboard key. */
  void linenoiseEditDelete(struct linenoiseState *l) {
      if (l->len > 0 && l->pos < l->len) {
@@ -393,7 +412,7 @@
          l->buf[l->len] = '\0';
          refreshLine(l);
      }
-@@ -820,9 +956,10 @@
+@@ -820,9 +968,10 @@
  /* Backspace implementation. */
  void linenoiseEditBackspace(struct linenoiseState *l) {
      if (l->pos > 0 && l->len > 0) {
@@ -407,7 +426,7 @@
          l->buf[l->len] = '\0';
          refreshLine(l);
      }
-@@ -866,19 +1003,19 @@
+@@ -866,19 +1015,19 @@
   *
   * The function returns 0 on success, or -1 if writing to standard output
   * fails. If stdin_fd or stdout_fd are set to -1, the default is to use
@@ -431,22 +450,45 @@
      l->len = 0;
  
      /* Enter raw mode. */
-@@ -930,11 +1067,12 @@
+@@ -930,11 +1079,12 @@
       * count limits. */
      if (!isatty(l->ifd)) return linenoiseNoTTY();
  
 -    char c;
 +    int c;
      int nread;
+-    char seq[3];
 +    char cbuf[32]; // large enough for any encoding?
-     char seq[3];
++    char seq[5];
  
 -    nread = read(l->ifd,&c,1);
 +    nread = readCode(l->ifd,cbuf,sizeof(cbuf),&c);
      if (nread <= 0) return NULL;
  
      /* Only autocomplete when the callback is set. It returns < 0 when
-@@ -1057,7 +1195,7 @@
+@@ -1020,6 +1170,21 @@
+                         break;
+                     }
+                 }
++                else if (seq[2] == ';') {
++                    // read additional 2 bytes
++                    if (read(l->ifd, seq + 3, 1) == -1) break;
++                    if (read(l->ifd, seq + 4, 1) == -1) break;
++                    if (seq[3] == '5') {
++                        switch (seq[4]) {
++                        case 'D': // ctrl-left
++                            linenoiseEditMovePrevWord(l);
++                            break;
++                        case 'C': // ctrl-right
++                            linenoiseEditMoveNextWord(l);
++                            break;
++                        }
++                    }
++                }
+             } else {
+                 switch(seq[1]) {
+                 case 'A': /* Up */
+@@ -1057,7 +1222,7 @@
          }
          break;
      default:
@@ -455,7 +497,7 @@
          break;
      case CTRL_U: /* Ctrl+u, delete the whole line. */
          l->buf[0] = '\0';
-@@ -1125,24 +1263,24 @@
+@@ -1125,24 +1290,24 @@
  
      printf("Linenoise key codes debugging mode.\n"
              "Press keys to see scan codes. Type 'quit' at any time to exit.\n");
@@ -485,7 +527,7 @@
  }
  
  /* This function is called when linenoise() is called with the standard
-@@ -1189,7 +1327,14 @@
+@@ -1189,7 +1354,14 @@
  char *linenoise(const char *prompt) {
      char buf[LINENOISE_MAX_LINE];
  
@@ -501,7 +543,7 @@
          /* Not a tty: read from file / pipe. In this mode we don't want any
           * limit to the line size, so we call a function to handle that. */
          return linenoiseNoTTY();
-@@ -1197,7 +1342,7 @@
+@@ -1197,7 +1369,7 @@
          size_t len;
  
          printf("%s",prompt);
@@ -510,7 +552,7 @@
          if (fgets(buf,LINENOISE_MAX_LINE,stdin) == NULL) return NULL;
          len = strlen(buf);
          while(len && (buf[len-1] == '\n' || buf[len-1] == '\r')) {
-@@ -1206,7 +1351,7 @@
+@@ -1206,7 +1378,7 @@
          }
          return strdup(buf);
      } else {
@@ -519,7 +561,7 @@
          return retval;
      }
  }
-@@ -1236,7 +1381,7 @@
+@@ -1236,7 +1408,7 @@
  
  /* At exit we'll try to fix the terminal to the initial conditions. */
  static void linenoiseAtExit(void) {

@@ -38,12 +38,12 @@ int main(int argc, char** argv) {
   char* line;
   cli(argc, argv, &historyfile, &prompt);
   if (historyfile) linenoiseHistorySetMaxLen(linenoiseHistoryLoad(historyfile) ? 0 : 100);
-  // setup output file descriptor. important when called in a subshell
-	if (!isatty(1)) {
+  // when called in a subshell then line editing output goes to parent terminal
+  if (!isatty(1)) {
     linenoise_stdout = fopen(tty_dev_path, "w");
     if (!linenoise_stdout) exit(errno);
   }
-  // if prompt is not set in linenoise, linenoise clears it
+  // if prompt were not set in linenoise, linenoise would clear it when editing
   line = linenoise(prompt);
   if (line) {
     write(1, line, strlen(line));
