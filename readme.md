@@ -46,6 +46,9 @@ bsd-2
 * [multibyte character support by yhirose](https://github.com/yhirose/linenoise)
 * [word-navigation by c-cube](https://github.com/ocaml-community/ocaml-linenoise)
 
+# other
+* [i set variables in a loop that's in a pipeline. why do they disappear after the loop terminates? or, why can't i pipe data to read?](https://mywiki.wooledge.org/BashFAQ/024)
+
 # similar projects
 * [input](https://github.com/nmeum/input)
 * [rlwrap](https://github.com/hanslub42/rlwrap)

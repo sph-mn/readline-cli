@@ -377,7 +377,7 @@ static int getCursorPosition(int ifd, int ofd) {
 static int getColumns(int ifd, int ofd) {
     struct winsize ws;
 
-    if (ioctl(1, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
+    if (ioctl(ifd, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
         /* ioctl() failed. Try to query the terminal itself. */
         int start, cols;
 
@@ -1258,7 +1258,7 @@ char *linenoiseEditFeed(struct linenoiseState *l) {
 void linenoiseEditStop(struct linenoiseState *l) {
     if (!isatty(l->ifd)) return;
     disableRawMode(l->ifd);
-    printf("\n");
+    write(l->ofd, "\n", 1);
 }
 
 /* This just implements a blocking loop for the multiplexed API.
@@ -1277,6 +1277,7 @@ static char *linenoiseBlockingEdit(int stdin_fd, int stdout_fd, char *buf, size_
 
     linenoiseEditStart(&l,stdin_fd,stdout_fd,buf,buflen,prompt);
     char *res;
+    refreshLine(&l);
     while((res = linenoiseEditFeed(&l)) == linenoiseEditMore);
     linenoiseEditStop(&l);
     return res;

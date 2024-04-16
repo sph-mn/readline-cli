@@ -1,0 +1,3 @@
+#!/bin/sh
+
+diff -u other/linenoise.c src/foreign/linenoise-extended.c > other/linenoise-extended.diff

@@ -1,5 +1,5 @@
 --- other/linenoise.c	2024-04-13 19:00:48.204849993 +0200
-+++ src/foreign/linenoise-extended.c	2024-04-13 18:59:31.296763964 +0200
++++ src/foreign/linenoise-extended.c	2024-04-16 02:25:17.667422423 +0200
 @@ -1,3 +1,8 @@
 +// linenoise.c with the following extensions:
 +// * word-navigation with ctrl+left and ctrl+right
@@ -135,6 +135,15 @@
      if (!atexit_registered) {
          atexit(linenoiseAtExit);
          atexit_registered = 1;
+@@ -288,7 +377,7 @@
+ static int getColumns(int ifd, int ofd) {
+     struct winsize ws;
+ 
+-    if (ioctl(1, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
++    if (ioctl(ifd, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
+         /* ioctl() failed. Try to query the terminal itself. */
+         int start, cols;
+ 
 @@ -320,7 +409,7 @@
  
  /* Clear the screen. Used to handle ctrl+l */
@@ -497,7 +506,24 @@
          break;
      case CTRL_U: /* Ctrl+u, delete the whole line. */
          l->buf[0] = '\0';
-@@ -1125,24 +1290,24 @@
+@@ -1093,7 +1258,7 @@
+ void linenoiseEditStop(struct linenoiseState *l) {
+     if (!isatty(l->ifd)) return;
+     disableRawMode(l->ifd);
+-    printf("\n");
++    write(l->ofd, "\n", 1);
+ }
+ 
+ /* This just implements a blocking loop for the multiplexed API.
+@@ -1112,6 +1277,7 @@
+ 
+     linenoiseEditStart(&l,stdin_fd,stdout_fd,buf,buflen,prompt);
+     char *res;
++    refreshLine(&l);
+     while((res = linenoiseEditFeed(&l)) == linenoiseEditMore);
+     linenoiseEditStop(&l);
+     return res;
+@@ -1125,24 +1291,24 @@
  
      printf("Linenoise key codes debugging mode.\n"
              "Press keys to see scan codes. Type 'quit' at any time to exit.\n");
@@ -527,7 +553,7 @@
  }
  
  /* This function is called when linenoise() is called with the standard
-@@ -1189,7 +1354,14 @@
+@@ -1189,7 +1355,14 @@
  char *linenoise(const char *prompt) {
      char buf[LINENOISE_MAX_LINE];
  
@@ -543,7 +569,7 @@
          /* Not a tty: read from file / pipe. In this mode we don't want any
           * limit to the line size, so we call a function to handle that. */
          return linenoiseNoTTY();
-@@ -1197,7 +1369,7 @@
+@@ -1197,7 +1370,7 @@
          size_t len;
  
          printf("%s",prompt);
@@ -552,7 +578,7 @@
          if (fgets(buf,LINENOISE_MAX_LINE,stdin) == NULL) return NULL;
          len = strlen(buf);
          while(len && (buf[len-1] == '\n' || buf[len-1] == '\r')) {
-@@ -1206,7 +1378,7 @@
+@@ -1206,7 +1379,7 @@
          }
          return strdup(buf);
      } else {
@@ -561,7 +587,7 @@
          return retval;
      }
  }
-@@ -1236,7 +1408,7 @@
+@@ -1236,7 +1409,7 @@
  
  /* At exit we'll try to fix the terminal to the initial conditions. */
  static void linenoiseAtExit(void) {
