@@ -1,4 +1,7 @@
 # readline-cli
+
+*paused development. no functional version*
+
 executable for getting user input with simple line-editing.
 like readline for the shell, yet based on [linenoise](https://github.com/antirez/linenoise).
 
@@ -52,3 +55,4 @@ bsd-2
 # similar projects
 * [input](https://github.com/nmeum/input)
 * [rlwrap](https://github.com/hanslub42/rlwrap)
+* [node repl](https://nodejs.org/api/repl.html)
